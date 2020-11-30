@@ -23,11 +23,11 @@
  * provide your team information in the following struct.
  ********************************************************/
 team_t team = {
-    /* bu username : eg. jappavoo */
+    /* bu username : bbadnani
     "",
-    /* full name : eg. jonathan appavoo */
+    /* full name : Ben Badnani
     "",
-    /* email address : jappavoo@bu.edu */
+    /* email address : bbadnani@bu.edu
     "",
     "",
     ""
