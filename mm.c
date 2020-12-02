@@ -18,6 +18,9 @@
 #include "mm.h"
 #include "memlib.h"
 
+// declare static extend_heap function
+static void *extend_heap(size_t words);
+
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
  * provide your team information in the following struct.
@@ -94,8 +97,25 @@ void *mem_sbrk(int incr){
 /* 
  * mm_init - initialize the malloc package.
  */
+
+ // from page 831 CSAPP
 int mm_init(void)
 {
+    /* Create the initial empty heap */
+
+    // if mem_sbrk is unable to allocate memory for a initial 4 byte block, footer and header,
+    // return -1
+    if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
+        return -1;
+    PUT(heap_listp, 0); /* Alignment padding */
+    PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1)); /* Prologue header */
+    PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1)); /* Prologue footer */
+    PUT(heap_listp + (3*WSIZE), PACK(0, 1)); /* Epilogue header */
+    heap_listp += (2*WSIZE); // make pointer point to first block after header
+
+    /* Extend the empty heap with a free block of CHUNKSIZE bytes */
+    if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
+        return -1;
     return 0;
 }
 
