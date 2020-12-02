@@ -39,8 +39,57 @@ team_t team = {
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
 
-
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+
+ 
+/* Basic constants and macros  - page 830 CSAPP*/
+#define WSIZE 4 /* Word and header/footer size (bytes) */
+#define DSIZE 8 /* Double word size (bytes) */
+#define CHUNKSIZE (1<<12)  /* Extend heap by this amount (bytes) */
+
+#define MAX(x, y) ((x) > (y)? (x) : (y))
+
+/* Pack a size and allocated bit into a word */
+#define PACK(size, alloc)  ((size) | (alloc))
+
+/* Read and write a word at address p */
+#define GET(p) (*(unsigned int *)(p))
+#define PUT(p, val) (*(unsigned int *)(p) = (val))
+
+/* Read the size and allocated fields from address p */
+#define GET_SIZE(p) (GET(p) & ~0x7) 
+#define GET_ALLOC(p) (GET(p) & 0x1)
+
+/* Given block ptr bp,compute address of its header and footer */
+#define HDRP(bp) ((char *)(bp) - WSIZE)
+#define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+
+/* Given block ptr bp, compute address of next and previous blocks */
+#define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
+#define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
+
+
+static char* mem_heap;
+static char* mem_brk;
+static char* mem_max_address;
+
+//Page 828 CSAPP
+void *mem_sbrk(int incr){
+
+    char* old_brk = mem_brk;
+
+    // if incr is negative or greater than the available VM space return -1
+    if((incr < 0) || ((mem_brk + incr) > mem_max_address)){
+        errno = ENOMEM;
+        fprintf(stderr, "ERROR: mem_sbrk failed. Ran out of memory...\n");
+        return (void *)-1;
+    }
+    // else, increase size of the heap by 1 and return the original pointer
+    mem_brk += incr;
+    return (void *)old_brk;
+        
+    }
+}
 
 /* 
  * mm_init - initialize the malloc package.
