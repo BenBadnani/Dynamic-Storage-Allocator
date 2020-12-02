@@ -18,14 +18,6 @@
 #include "mm.h"
 #include "memlib.h"
 
-// declare static extend_heap function
-static void *extend_heap(size_t words);
-// declare static coalesce function
-static void *coalesce(void *bp);
-// declare static find_fit function
-static void *find_fit(size_t asize);
-// declare static place function
-static void place(void *bp, size_t asize);
 
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
@@ -77,13 +69,14 @@ team_t team = {
 #define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
 #define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
-
+// initializing global pointers
 static char* mem_heap;
 static char* mem_brk;
 static char* mem_max_address;
 
 // from page 831 CSAPP
-static void *extend_heap(size_t words){
+static void* extend_heap(size_t words){
+
     char *bp;
     size_t size;
 
@@ -103,7 +96,7 @@ static void *extend_heap(size_t words){
 
 
 //Page 828 CSAPP
-void *mem_sbrk(int incr){
+void* mem_sbrk(int incr){
 
     char* old_brk = mem_brk;
 
@@ -117,8 +110,8 @@ void *mem_sbrk(int incr){
     mem_brk += incr;
     return (void *)old_brk;
         
-    }
 }
+
 
 /* 
  * mm_init - initialize the malloc package.
@@ -146,7 +139,7 @@ int mm_init(void)
 }
 
 // from page 856 CSAPP
-static void *find_fit(size_t asize){
+static void* find_fit(size_t asize){
 
     /* First fit search */
     void *bp;
@@ -182,7 +175,7 @@ static void place(void *bp, size_t asize){
  *     Always allocate a block whose size is a multiple of the alignment.
  */
  // from page 834 CSAPP
-void *mm_malloc(size_t size)
+void* mm_malloc(size_t size)
 {
     size_t asize; /* Adjusted block size */
     size_t extendsize; /* Amount to extend heap if no fit */
@@ -215,7 +208,7 @@ void *mm_malloc(size_t size)
 
 
 // from page 833 CSAPP
-static void *coalesce(void *bp){
+static void* coalesce(void *bp){
 
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp)));
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
@@ -263,7 +256,7 @@ void mm_free(void *ptr)
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
-void *mm_realloc(void *ptr, size_t size)
+void* mm_realloc(void *ptr, size_t size)
 {
     void *oldptr = ptr;
     void *newptr;
