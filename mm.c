@@ -175,8 +175,13 @@ static void *coalesce(void *bp){
 /*
  * mm_free - Freeing a block does nothing.
  */
+ // from page 833 CSAPP
 void mm_free(void *ptr)
 {
+    size_t size = GET_SIZE(HDRP(bp));
+    PUT(HDRP(bp), PACK(size, 0));
+    PUT(FTRP(bp), PACK(size, 0));
+    coalesce(bp);
 }
 
 /*
