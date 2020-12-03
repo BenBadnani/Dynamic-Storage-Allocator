@@ -216,8 +216,6 @@ static void place(void *bp, size_t asize){
     }
 }
 
-
-
 /*
  * mm_free - Freeing a block does nothing.
  */
@@ -245,14 +243,14 @@ void *mm_realloc(void *bp, size_t size)
     // if size is zero, simply free the block
     if(size == 0){
         mm_free(bp);
-        return 0;
+        return bp;
     }
 
     // allocate new memory for realloc call
     void* new_ptr = mm_malloc(size);
     // check if malloc works
     if(new_ptr == NULL){
-        return 0;
+        return NULL;
     }
 
     size_t size_bp = GET_SIZE(HDRP(bp));
@@ -260,14 +258,12 @@ void *mm_realloc(void *bp, size_t size)
     // if the bp's size is less than newly allocated size in new_ptr
     // copy over only size_bp elems from bp to new_ptr
     // else, copy over the smaller, newly defined, size passed in
-    if(size_bp <= size)
-        size = size_bp;
+    size = (size_bp <= size ? size_bp : size);
+    
     memcpy(new_ptr, bp, size);
 
     // free the old block of memory that has now been reallocated
-    free(bp);
+    mm_free(bp);
 
     return new_ptr; 
-
-
 }
