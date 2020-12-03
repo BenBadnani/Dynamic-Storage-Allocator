@@ -49,7 +49,9 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
- 
+// Declaring pointer used in macro functions defined below
+static char* bp;
+
 /* Basic constants and macros  - page 830 CSAPP*/
 #define WSIZE 4 /* Word and header/footer size (bytes) */
 #define DSIZE 8 /* Double word size (bytes) */
@@ -77,8 +79,8 @@ team_t team = {
 #define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 // initializing global pointers
-static char* mem_heap = 0;
-static char* mem_brk = 0;
+static char* heap_listp = 0; // heap_listp
+static char* mem_brk = 0; // 
 static char* mem_max_address = 0;
 
 // from page 831 CSAPP
@@ -99,24 +101,6 @@ static void* extend_heap(size_t words){
 
     /* Coalesce if the previous block was free */
     return coalesce(bp);
-}
-
-
-//Page 828 CSAPP
-void* mem_sbrk(int incr){
-
-    char* old_brk = mem_brk;
-
-    // if incr is negative or greater than the available VM space return -1
-    if((incr < 0) || ((mem_brk + incr) > mem_max_address)){
-        errno = ENOMEM;
-        fprintf(stderr, "ERROR: mem_sbrk failed. Ran out of memory...\n");
-        return (void *)-1;
-    }
-    // else, increase size of the heap by 1 and return the original pointer
-    mem_brk += incr;
-    return (void *)old_brk;
-        
 }
 
 
@@ -156,6 +140,7 @@ static void* find_fit(size_t asize){
             return bp;
         }
     }
+    return NULL; /* No fit */
 
 }
 

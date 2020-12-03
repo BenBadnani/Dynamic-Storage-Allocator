@@ -15,6 +15,8 @@
 #include "config.h"
 
 /* private variables */
+
+// declared as chars because they are one byte long
 static char *mem_start_brk;  /* points to first byte of heap */
 static char *mem_brk;        /* points to last byte of heap */
 static char *mem_max_addr;   /* largest legal heap address */ 
