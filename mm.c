@@ -92,6 +92,7 @@ int mm_init(void)
     heap_listp += (2*WSIZE);
 
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
+    
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
         return -1;
     return 0;
@@ -127,11 +128,16 @@ static void *coalesce(void *bp)
         return bp;
     }
     else if (prev_alloc && !next_alloc) {
-        size += GET_SIZE(HDRP(NEXT_BLKP(bp))); PUT(HDRP(bp), PACK(size, 0)); PUT(FTRP(bp), PACK(size,0));
+        size += GET_SIZE(HDRP(NEXT_BLKP(bp))); 
+        PUT(HDRP(bp), PACK(size, 0)); 
+        PUT(FTRP(bp), PACK(size,0));
     }
 
     else if (!prev_alloc && next_alloc) {
-        size += GET_SIZE(HDRP(PREV_BLKP(bp))); PUT(FTRP(bp), PACK(size, 0)); PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0)); bp = PREV_BLKP(bp);
+        size += GET_SIZE(HDRP(PREV_BLKP(bp))); 
+        PUT(FTRP(bp), PACK(size, 0)); 
+        PUT(HDRP(PREV_BLKP(bp)), 
+        PACK(size, 0)); bp = PREV_BLKP(bp);
     }
     else {
         size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(FTRP(NEXT_BLKP(bp)));
@@ -151,13 +157,17 @@ return bp;
  
 void *mm_malloc(size_t size)
 {
+    if (size == 0)
+        return NULL;
+
     size_t asize; 
     size_t extendsize; 
     char *bp;
 
-    if (size == 0)
-        return NULL;
+    // size > aggreagate free memory, extend heap
+    // need aggregate free memory counter, need heap size tracker
 
+    // make size round up to nearest 8 multiple
     if (size <= DSIZE)
         asize = 2*DSIZE;
     else
@@ -211,8 +221,6 @@ static void place(void *bp, size_t asize){
 /*
  * mm_free - Freeing a block does nothing.
  */
-
-
 void mm_free(void *bp)
 {
     size_t size = GET_SIZE(HDRP(bp));
@@ -226,19 +234,40 @@ void mm_free(void *bp)
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
-void *mm_realloc(void *ptr, size_t size)
+void *mm_realloc(void *bp, size_t size)
 {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
+
+    // if bp points to null,
+    // return mm_malloc(size)
+    if(bp == NULL)
+        return mm_malloc(size);
     
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-      return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    if (size < copySize)
-      copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
+    // if size is zero, simply free the block
+    if(size == 0){
+        mm_free(bp);
+        return 0;
+    }
+
+    // allocate new memory for realloc call
+    void* new_ptr = mm_malloc(size);
+    // check if malloc works
+    if(new_ptr == NULL){
+        return 0;
+    }
+
+    size_t size_bp = GET_SIZE(HDRP(bp));
+
+    // if the bp's size is less than newly allocated size in new_ptr
+    // copy over only size_bp elems from bp to new_ptr
+    // else, copy over the smaller, newly defined, size passed in
+    if(size_bp <= size)
+        size = size_bp;
+    memcpy(new_ptr, bp, size);
+
+    // free the old block of memory that has now been reallocated
+    free(bp);
+
+    return new_ptr; 
+
+
 }
