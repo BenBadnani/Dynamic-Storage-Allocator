@@ -80,8 +80,6 @@ static char* bp;
 
 // initializing global pointers
 static char* heap_listp = 0; // heap_listp
-static char* mem_brk = 0; // 
-static char* mem_max_address = 0;
 
 // from page 831 CSAPP
 static void* extend_heap(size_t words){
