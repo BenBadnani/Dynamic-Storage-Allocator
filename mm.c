@@ -18,20 +18,27 @@
 #include "mm.h"
 #include "memlib.h"
 
+// for erno call in mem_sbrk
+#include <errno.h>
+
+// declare static extend_heap function
+static void *extend_heap(size_t words);
+// declare static coalesce function
+static void *coalesce(void *bp);
+// declare static find_fit function
+static void *find_fit(size_t asize);
+// declare static place function
+static void place(void *bp, size_t asize);
+
 
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
  * provide your team information in the following struct.
  ********************************************************/
 team_t team = {
-    /* bu username : bbadnani
-    "",
-    /* full name : Ben Badnani
-    "",
-    /* email address : bbadnani@bu.edu
-    "",
-    "",
-    ""
+   "bbadnani",
+   "Ben Badnani", 
+    "badnani@bu.edu"
 };
 
 /* single word (4) or double word (8) alignment */
@@ -70,9 +77,9 @@ team_t team = {
 #define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 // initializing global pointers
-static char* mem_heap;
-static char* mem_brk;
-static char* mem_max_address;
+static char* mem_heap = 0;
+static char* mem_brk = 0;
+static char* mem_max_address = 0;
 
 // from page 831 CSAPP
 static void* extend_heap(size_t words){
