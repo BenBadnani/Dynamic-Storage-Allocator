@@ -76,13 +76,12 @@ static void place(void *bp, size_t asize);
 #define NEXT_BLKP(bp)	((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE))) 
 #define PREV_BLKP(bp)	((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
-/* Given block ptr bp, check to see if it is last block by seeing if the next header is the epilogue */
-#define LAST_BLOCK(bp) ((!(GET_SIZE(HDRP(NEXT_BLKP(bp))))) && (GET_ALLOC(HDRP(NEXT_BLKP(bp)))) ? 1 : 0) 
-
+// global heap_list pointer 
 void *heap_listp;
 
 /* 
  * mm_init - initialize the malloc package.
+ * Code from pg 831 CSAPP
  */
 int mm_init(void)
 {
@@ -101,7 +100,12 @@ int mm_init(void)
     return 0;
 }
 
-// Add source and function description
+/*
+    extend_heap - if more heap is required for a given 
+    allocator request, add more free blocks of memory
+    via a mem_sbrk call 
+    pg 831 CSAPP
+*/
 static void *extend_heap(size_t words)
 {
     char *bp;
@@ -110,7 +114,7 @@ static void *extend_heap(size_t words)
     /* Allocate an even number of words to maintain alignment */
     size = (words % 2) ? (words+1) * WSIZE : words * WSIZE;
     if ((long)(bp = mem_sbrk(size)) == -1)
-    return NULL;
+        return NULL;
 
     /* Initialize free block header/footer and the epilogue header */
     PUT(HDRP(bp), PACK(size, 0)); /* Free block header */
@@ -121,7 +125,11 @@ static void *extend_heap(size_t words)
     return coalesce(bp);
 }
 
-// Add source and function description
+/*
+    coalesce - search to see if there are any contiguous
+    free blocks of heap, and merge them
+    pg 833 CSAPP
+*/
 static void *coalesce(void *bp)
 {
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
@@ -155,8 +163,9 @@ return bp;
 }
 
 /* 
- * mm_malloc - Allocate a block by incrementing the brk pointer.
+ *     mm_malloc - Allocate a block by incrementing the brk pointer.
  *     Always allocate a block whose size is a multiple of the alignment.
+ *     Code from pg 834 CSAPP 
  */
 void *mm_malloc(size_t size)
 {
@@ -185,7 +194,11 @@ void *mm_malloc(size_t size)
     return bp;
 }
 
-// Add source and function description
+/*
+    find_fit - find the first fit for a given size among
+    the free blocks in the heap
+    pg 856 CSAPP
+*/
 static void *find_fit(size_t asize)
 {
     void *bp;
@@ -198,7 +211,11 @@ static void *find_fit(size_t asize)
     return NULL;
 }
 
-// Add source and funciton description 
+/*  place - find a block of free memory in heap
+    allocate the passed in asize, and 
+    either allow for interanl or external fragmentation
+    pg 856 CSAPP
+*/
 static void place(void *bp, size_t asize){
 
     size_t csize = GET_SIZE(HDRP(bp));
@@ -218,7 +235,9 @@ static void place(void *bp, size_t asize){
 }
 
 /*
- * mm_free - Freeing a block does nothing.
+ *  mm_free - Change header and footer of 
+ *  respective block by changing header and footer alloc to 0 
+ *  Code from pg 833 CSAPP
  */
 void mm_free(void *bp)
 {
@@ -231,7 +250,8 @@ void mm_free(void *bp)
 
 
 /*
- * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
+ * mm_realloc - given a pointer previously called by malloc or realloc,
+ * adjust size of respective block of memory to match requirements of passed in size
  */
 void *mm_realloc(void *bp, size_t size)
 {
@@ -245,15 +265,6 @@ void *mm_realloc(void *bp, size_t size)
         mm_free(bp);
         return NULL;
     }
-/*
-    size_t asize, csize;
-
-    asize = ALIGN(size); // rounding up size to nearest multiple of 8
-    csize = GET_SIZE(HDRP(bp)); // size of current block
-
-    if(asize <= csize){
-        return bp;
-    }*/
 
     // allocate new memory for realloc call
     void* new_ptr = mm_malloc(size);
@@ -275,6 +286,4 @@ void *mm_realloc(void *bp, size_t size)
     mm_free(bp);
 
     return new_ptr; 
-
-
 }
