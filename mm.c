@@ -198,7 +198,7 @@ void *mm_malloc(size_t size)
 }
 
 /*
-    find_fit - find the first fit for a given size among
+    find_fit - find the second fit for a given size among
     the free blocks in the heap
     pg 856 CSAPP
 */
@@ -208,10 +208,36 @@ static void *find_fit(size_t asize)
 
     for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
 	    if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))) {
-		    return bp;
+		    break;
 	    }
     }
-    return NULL;
+
+    if(GET_SIZE(HDRP(bp)) == 0)
+        return NULL;
+
+    void *next_bp = NEXT_BLKP(bp); 
+
+    // if next block is not the epilogue
+    if(GET_SIZE(HDRP(NEXT_BLKP(bp))) != 0){
+        // traverse list and find next fit 
+        for(; GET_SIZE(HDRP(next_bp)) > 0; next_bp = NEXT_BLKP(next_bp)){
+	        if(!GET_ALLOC(HDRP(next_bp)) && (asize <= GET_SIZE(HDRP(next_bp)))) {
+		        break;
+	        }
+        }
+    }
+
+    // if next fit couldn't find a free block, return first fit
+    if(GET_SIZE(HDRP(next_bp)) == 0){
+        return bp;
+    }
+
+    if(GET_SIZE(HDRP(next_bp)) < GET_SIZE(HDRP(bp)))
+        return next_bp;
+    
+    return bp; 
+
+
 }
 
 /*  place - find a block of free memory in heap
@@ -260,17 +286,6 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *bp, size_t size)
 {
-    // if bp points to null,
-    // return mm_malloc(size)
-    if(bp == NULL)
-        return mm_malloc(size);
-    
-    // if size is zero, simply free the block
-    if(size == 0){
-        mm_free(bp);
-        return NULL;
-    }
-
     // allocate new memory for realloc call
     void* new_ptr = mm_malloc(size);
     // check if malloc works
@@ -294,8 +309,8 @@ void *mm_realloc(void *bp, size_t size)
 }
 
 /* mm_check - checks to make sure allocated and free blocks
-   are within heap boundaries, and that there are no contiguous free blocks
-   that have not been coalesced. 
+   are within heap boundaries, that there are no contiguous free blocks
+   that have not been coalesced, and that no allocated blocks overlap.
 */
 static int mm_check(void){
 
