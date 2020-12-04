@@ -39,7 +39,7 @@ static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
-static int mm_check(void);
+//static int mm_check(void);
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
@@ -193,7 +193,7 @@ void *mm_malloc(size_t size)
         return NULL;
     place(bp, asize);
 
-     mm_check();
+    //mm_check();
     return bp;
 }
 
@@ -204,14 +204,39 @@ void *mm_malloc(size_t size)
 */
 static void *find_fit(size_t asize)
 {
-    void *bp;
+void *bp;
 
     for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
 	    if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))) {
-		    return bp;
+		    break;
 	    }
     }
-    return NULL;
+
+    if(GET_SIZE(HDRP(bp)) == 0)
+        return NULL;
+
+    void *next_bp = NEXT_BLKP(bp); 
+
+    // if next block is not the epilogue
+    if(GET_SIZE(HDRP(NEXT_BLKP(bp))) != 0){
+        // traverse list and find next fit 
+        for(; GET_SIZE(HDRP(next_bp)) > 0; next_bp = NEXT_BLKP(next_bp)){
+	        if(!GET_ALLOC(HDRP(next_bp)) && (asize <= GET_SIZE(HDRP(next_bp)))) {
+		        break;
+	        }
+        }
+    }
+
+    // if next fit couldn't find a free block, return first fit
+    if(GET_SIZE(HDRP(next_bp)) == 0){
+        return bp;
+    }
+
+    if(GET_SIZE(HDRP(next_bp)) < GET_SIZE(HDRP(bp)))
+        return next_bp;
+    
+    return bp; 
+
 }
 
 /*  place - find a block of free memory in heap
@@ -250,7 +275,7 @@ void mm_free(void *bp)
     PUT(FTRP(bp), PACK(size, 0));
     coalesce(bp);
 
-    mm_check();
+    //mm_check();
 }
 
 
@@ -285,7 +310,7 @@ void *mm_realloc(void *bp, size_t size)
 /* mm_check - checks to make sure allocated and free blocks
    are within heap boundaries, that there are no contiguous free blocks
    that have not been coalesced, and that no allocated blocks overlap.
-*/
+*/ /*
 static int mm_check(void){
 
     void* start = mem_heap_lo(); 
@@ -309,14 +334,14 @@ static int mm_check(void){
                 ret += 1; 
                 }
             // if header dneq footer, there is block overlap
-          /*  if((!!(GET_SIZE(HDRP(bp)) ^ GET_SIZE(FTRP(bp)))) 
+            if((!!(GET_SIZE(HDRP(bp)) ^ GET_SIZE(FTRP(bp)))) 
                 & GET_ALLOC(HDRP(bp)) 
                 &  GET_ALLOC(HDRP(NEXT_BLKP(bp)))){ // and if both blocks are allocated
                 printf("Error: The allocated blocks, %p and %p, overlap\n", bp, NEXT_BLKP(bp));
-            }*/
+            }
         }
         
     }
 
     return ret;
-}
+}*/
