@@ -261,6 +261,17 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *bp, size_t size)
 {
+       // if bp points to null,
+    // return mm_malloc(size)
+    if(bp == NULL)
+        return mm_malloc(size);
+    
+    // if size is zero, simply free the block
+    if(size == 0){
+        mm_free(bp);
+        return NULL;
+    }
+
     // allocate new memory for realloc call
     void* new_ptr = mm_malloc(size);
     // check if malloc works
