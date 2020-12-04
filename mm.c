@@ -245,42 +245,36 @@ void *mm_realloc(void *bp, size_t size)
         mm_free(bp);
         return NULL;
     }
-
-    // declaring ints after first two cases, to save memory
-    size_t asize, csize, nsize; 
-    int nalloc;
+/*
+    size_t asize, csize;
 
     asize = ALIGN(size); // rounding up size to nearest multiple of 8
     csize = GET_SIZE(HDRP(bp)); // size of current block
 
     if(asize <= csize){
         return bp;
+    }*/
+
+    // allocate new memory for realloc call
+    void* new_ptr = mm_malloc(size);
+    // check if malloc works
+    if(new_ptr == NULL){
+        return NULL;
     }
 
-    nsize = GET_SIZE(HDRP(NEXT_BLKP(bp)));
-    nalloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
+    size_t size_bp = GET_SIZE(HDRP(bp));
 
-    // if the next block is free 
-    if(!nalloc){
-        // if bp is the last block
-        if(LAST_BLOCK(bp)){ // if bp points to the last block
-            if(extend_heap(asize/ WSIZE) == NULL) // extend the heap by asize/wsize blocks
-                return NULL;
-        }
-        // if block next to bp is last block, but still not sufficient for realloc size request
-        else if(nsize + csize < asize && LAST_BLOCK(NEXT_BLKP(bp))){ // 
-            if(extend_heap(((asize - nsize + csize)/ WSIZE) == NULL)
-                return NULL; // extend heap by the difference of how many bytes are needed
-        }
-        // if bp has a free block in front of it, but cannot be coalesced to satisfy
-        // request, must break and look for new location in heap
-        else if(nsize + csize < asize && !LAST_BLOCK(NEXT_BLKP(bp))){
-            break;
-        }
-        // manually merging the blocks with new heap provided based on conditions above
-        PUT(HDRP(bp), PACK(asize), 1)); 
-        PUT(FTRP(bp), PACK(asize), 1));
-        return bp; 
-    }
+    // if the bp's size is less than newly allocated size in new_ptr
+    // copy over only size_bp elems from bp to new_ptr
+    // else, copy over the smaller, newly defined, size passed in
+    size = (size_bp <= size ? size_bp : size);
+    
+    memcpy(new_ptr, bp, size);
+
+    // free the old block of memory that has now been reallocated
+    mm_free(bp);
+
+    return new_ptr; 
+
 
 }
