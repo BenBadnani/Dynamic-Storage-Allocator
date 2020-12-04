@@ -39,7 +39,7 @@ static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
-
+static int mm_check(void);
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
@@ -75,6 +75,7 @@ static void place(void *bp, size_t asize);
 /* Given block ptr bp,compute address of next and previous blocks */
 #define NEXT_BLKP(bp)	((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE))) 
 #define PREV_BLKP(bp)	((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
+
 
 // global heap_list pointer 
 void *heap_listp;
@@ -191,6 +192,8 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
+
+     mm_check();
     return bp;
 }
 
@@ -246,6 +249,8 @@ void mm_free(void *bp)
     PUT(HDRP(bp), PACK(size, 0));
     PUT(FTRP(bp), PACK(size, 0));
     coalesce(bp);
+
+    mm_check();
 }
 
 
@@ -286,4 +291,38 @@ void *mm_realloc(void *bp, size_t size)
     mm_free(bp);
 
     return new_ptr; 
+}
+
+/* mm_check - checks to make sure allocated and free blocks
+   are within heap boundaries, and that there are no contiguous free blocks
+   that have not been coalesced. 
+*/
+static int mm_check(void){
+
+    void* start = mem_heap_lo(); 
+    void* end = mem_heap_hi();
+    void* bp; 
+    int ret = 0;
+
+    // check to see if address is valid heap address
+
+    // scans entire heap
+    for(bp = start; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
+        // check to see if any pointers exceed heap high and low space
+        if(bp < start || bp > end){
+            printf("Error: %p does not point to a valid heap block\n", bp);
+            ret += 1; 
+        }
+        // check for any contiguous free blocks
+        if((void *)NEXT_BLKP(bp) < end){ // to avoid seg faults
+            if(!(GET_ALLOC(HDRP(bp))) && !(GET_ALLOC(HDRP(NEXT_BLKP(bp))))){
+                printf("Error: %p and %p have not been coalesced\n", bp, NEXT_BLKP(bp));
+                ret += 1; 
+                }
+            }
+
+
+    }
+
+    return ret;
 }
