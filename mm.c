@@ -76,6 +76,9 @@ static void place(void *bp, size_t asize);
 #define NEXT_BLKP(bp)	((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE))) 
 #define PREV_BLKP(bp)	((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
+/* Given block ptr bp, check to see if it is the epilogue */
+#define EPILOGUE(bp) ((!(GET_SIZE(FTRP(bp))) && GET_ALLOC(FTRP(bp)))  ? 1 : 0); 
+
 void *heap_listp;
 
 /* 
@@ -137,7 +140,8 @@ static void *coalesce(void *bp)
         size += GET_SIZE(HDRP(PREV_BLKP(bp))); 
         PUT(FTRP(bp), PACK(size, 0)); 
         PUT(HDRP(PREV_BLKP(bp)), 
-        PACK(size, 0)); bp = PREV_BLKP(bp);
+        PACK(size, 0)); 
+        bp = PREV_BLKP(bp);
     }
     else {
         size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(FTRP(NEXT_BLKP(bp)));
@@ -234,7 +238,6 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *bp, size_t size)
 {
-
     // if bp points to null,
     // return mm_malloc(size)
     if(bp == NULL)
@@ -243,27 +246,42 @@ void *mm_realloc(void *bp, size_t size)
     // if size is zero, simply free the block
     if(size == 0){
         mm_free(bp);
-        return bp;
-    }
-
-    // allocate new memory for realloc call
-    void* new_ptr = mm_malloc(size);
-    // check if malloc works
-    if(new_ptr == NULL){
         return NULL;
     }
 
-    size_t size_bp = GET_SIZE(HDRP(bp));
+    size_t asize, csize, nsize; 
+    int nalloc;
 
-    // if the bp's size is less than newly allocated size in new_ptr
-    // copy over only size_bp elems from bp to new_ptr
-    // else, copy over the smaller, newly defined, size passed in
-    size = (size_bp <= size ? size_bp : size);
-    
-    memcpy(new_ptr, bp, size);
 
-    // free the old block of memory that has now been reallocated
-    mm_free(bp);
+    asize = ALIGN(size);
+    csize = GET_SIZE(HDRP(bp));
 
-    return new_ptr; 
+    if(asize <= csize){
+        return bp;
+    }
+
+    // if bp is the last block 
+    if(GET_SIZE(FTRP(bp)) == 0 && GET_ALLOC(FTRP(bp) == 1){
+
+    }
+    nsize = GET_SIZE(HDRP(NEXT_BLKP(bp)));
+    nalloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
+
+    // if the next block is free 
+    if(!nalloc){
+        // if the combined size of the next block and the current is large
+        // enough to store asize
+        if(nsize + csize >= asize){
+
+        }
+        else if(nsize + csize < asize &&  )
+
+
+    }
+
+
+
+
+
+   
 }
