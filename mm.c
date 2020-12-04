@@ -260,39 +260,28 @@ void *mm_realloc(void *bp, size_t size)
         return bp;
     }
 
-    // if bp is the last block
-    if(LAST_BLOCK(bp)
-    {
-        if((bp = extend_heap((asize - csize)/ WSIZE)) == NULL)
-            return NULL;
-        PLACE(bp, asize);
-        return bp;
-    }
-
     nsize = GET_SIZE(HDRP(NEXT_BLKP(bp)));
     nalloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
 
     // if the next block is free 
     if(!nalloc){
-        // if the combined size of the next block and the current is large
-        // enough to store asize
-        if(nsize + csize >= asize){
-            PLACE(bp, asize);
-            return bp;
+        // if bp is the last block
+        if(LAST_BLOCK(bp)){
+            if(extend_heap(asize/ WSIZE) == NULL)
+                return NULL;
         }
-        // if the combined if the combined size of the next block 
-        // and current block is not sufficient
-        // but the next block is the last in the heap
         else if(nsize + csize < asize && LAST_BLOCK(NEXT_BLKP(bp))){
-            if((bp = extend_heap((nsize - asize)/ WSIZE)) == NULL)
+            if(extend_heap(((asize - nsize + csize)/ WSIZE) == NULL)
                 return NULL; // extend heap by the difference of how many bytes are needed
-            PLACE(bp, asize);
-            return bp;
-            
         }
-
-
+        else if(nsize + csize < asize && !LAST_BLOCK(NEXT_BLKP(bp))){
+            break;
+        }
+        PUT(HDRP(bp), PACK(asize), 1));
+        PUT(FTRP(bp), PACK(asize), 1));
+        return bp; 
     }
+    
 
 
 
