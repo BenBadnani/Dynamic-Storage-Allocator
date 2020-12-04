@@ -198,7 +198,7 @@ void *mm_malloc(size_t size)
 }
 
 /*
-    find_fit - find the second fit for a given size among
+    find_fit - find the first fit for a given size among
     the free blocks in the heap
     pg 856 CSAPP
 */
@@ -208,36 +208,10 @@ static void *find_fit(size_t asize)
 
     for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
 	    if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))) {
-		    break;
+		    return bp;
 	    }
     }
-
-    if(GET_SIZE(HDRP(bp)) == 0)
-        return NULL;
-
-    void *next_bp = NEXT_BLKP(bp); 
-
-    // if next block is not the epilogue
-    if(GET_SIZE(HDRP(NEXT_BLKP(bp))) != 0){
-        // traverse list and find next fit 
-        for(; GET_SIZE(HDRP(next_bp)) > 0; next_bp = NEXT_BLKP(next_bp)){
-	        if(!GET_ALLOC(HDRP(next_bp)) && (asize <= GET_SIZE(HDRP(next_bp)))) {
-		        break;
-	        }
-        }
-    }
-
-    // if next fit couldn't find a free block, return first fit
-    if(GET_SIZE(HDRP(next_bp)) == 0){
-        return bp;
-    }
-
-    if(GET_SIZE(HDRP(next_bp)) < GET_SIZE(HDRP(bp)))
-        return next_bp;
-    
-    return bp; 
-
-
+    return NULL;
 }
 
 /*  place - find a block of free memory in heap
