@@ -77,7 +77,9 @@ static void place(void *bp, size_t asize);
 #define PREV_BLKP(bp)	((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 /* Given block ptr bp, check to see if it is the epilogue */
-#define EPILOGUE(bp) ((!(GET_SIZE(FTRP(bp))) && GET_ALLOC(FTRP(bp)))  ? 1 : 0); 
+#define EPILOGUE(bp) ( (!GET_SIZE((char *) (FTRP(bp) + WSIZE))) && (GET_ALLOC((char *) (FTRP(bp) + WSIZE)))  ? 1 : 0) 
+// add WSIZE to access header of next block/epilogue
+
 
 void *heap_listp;
 
@@ -260,8 +262,9 @@ void *mm_realloc(void *bp, size_t size)
         return bp;
     }
 
-    // if bp is the last block 
-    if(GET_SIZE(FTRP(bp)) == 0 && GET_ALLOC(FTRP(bp) == 1){
+    // if bp is the last block
+    if(EPILOGUE() // add WSIZE to move from footer to next header, or epilogue
+    {
 
     }
     nsize = GET_SIZE(HDRP(NEXT_BLKP(bp)));
@@ -274,7 +277,7 @@ void *mm_realloc(void *bp, size_t size)
         if(nsize + csize >= asize){
 
         }
-        else if(nsize + csize < asize &&  )
+        else if(nsize + csize < asize && EPILOGUE())
 
 
     }
