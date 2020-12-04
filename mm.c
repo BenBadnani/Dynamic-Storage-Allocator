@@ -261,9 +261,12 @@ void *mm_realloc(void *bp, size_t size)
     }
 
     // if bp is the last block
-    if(EPILOGUE(bp) // add WSIZE to move from footer to next header, or epilogue
+    if(LAST_BLOCK(bp)
     {
-
+        if((bp = extend_heap((asize - csize)/ WSIZE)) == NULL)
+            return NULL;
+        PLACE(bp, asize);
+        return bp;
     }
 
     nsize = GET_SIZE(HDRP(NEXT_BLKP(bp)));
@@ -274,15 +277,18 @@ void *mm_realloc(void *bp, size_t size)
         // if the combined size of the next block and the current is large
         // enough to store asize
         if(nsize + csize >= asize){
-            PUT(HDRP(bp), PACK(nsize + csize, 1));
-            PUT(FTRP(bp), PACK(nsize + csize), 1));
+            PLACE(bp, asize);
             return bp;
         }
         // if the combined if the combined size of the next block 
         // and current block is not sufficient
         // but the next block is the last in the heap
-        else if(nsize + csize < asize && EPILOGUE(NEXT_BLKP(bp))){
-
+        else if(nsize + csize < asize && LAST_BLOCK(NEXT_BLKP(bp))){
+            if((bp = extend_heap((nsize - asize)/ WSIZE)) == NULL)
+                return NULL; // extend heap by the difference of how many bytes are needed
+            PLACE(bp, asize);
+            return bp;
+            
         }
 
 
