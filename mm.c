@@ -101,7 +101,7 @@ int mm_init(void)
     return 0;
 }
 
-
+// Add source and function description
 static void *extend_heap(size_t words)
 {
     char *bp;
@@ -121,6 +121,7 @@ static void *extend_heap(size_t words)
     return coalesce(bp);
 }
 
+// Add source and function description
 static void *coalesce(void *bp)
 {
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
@@ -157,8 +158,6 @@ return bp;
  * mm_malloc - Allocate a block by incrementing the brk pointer.
  *     Always allocate a block whose size is a multiple of the alignment.
  */
-
- 
 void *mm_malloc(size_t size)
 {
     if (size == 0)
@@ -167,9 +166,6 @@ void *mm_malloc(size_t size)
     size_t asize; 
     size_t extendsize; 
     char *bp;
-
-    // size > aggreagate free memory, extend heap
-    // need aggregate free memory counter, need heap size tracker
 
     // make size round up to nearest 8 multiple
     if (size <= DSIZE)
@@ -189,7 +185,7 @@ void *mm_malloc(size_t size)
     return bp;
 }
 
-
+// Add source and function description
 static void *find_fit(size_t asize)
 {
     void *bp;
@@ -202,6 +198,7 @@ static void *find_fit(size_t asize)
     return NULL;
 }
 
+// Add source and funciton description 
 static void place(void *bp, size_t asize){
 
     size_t csize = GET_SIZE(HDRP(bp));
@@ -286,10 +283,4 @@ void *mm_realloc(void *bp, size_t size)
         return bp; 
     }
 
-
-
-
-
-
-   
 }
