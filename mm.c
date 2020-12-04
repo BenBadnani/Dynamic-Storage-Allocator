@@ -319,9 +319,14 @@ static int mm_check(void){
                 printf("Error: %p and %p have not been coalesced\n", bp, NEXT_BLKP(bp));
                 ret += 1; 
                 }
+            // if header dneq footer, there is block overlap
+            if((!!(GET_SIZE(HDRP(bp)) ^ GET_SIZE(FTRP(bp)))) 
+                & GET_ALLOC(HDRP(bp)) 
+                &  GET_ALLOC(HDRP(NEXT_BLKP(bp)))){ // and if both blocks are allocated
+                printf("Error: The allocated blocks, %p and %p, overlap\n", bp, NEXT_BLKP(bp));
             }
-
-
+        }
+        
     }
 
     return ret;
