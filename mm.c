@@ -76,10 +76,8 @@ static void place(void *bp, size_t asize);
 #define NEXT_BLKP(bp)	((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE))) 
 #define PREV_BLKP(bp)	((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
-/* Given block ptr bp, check to see if it is the epilogue */
-#define EPILOGUE(bp) ( (!GET_SIZE((char *) (FTRP(bp) + WSIZE))) && (GET_ALLOC((char *) (FTRP(bp) + WSIZE)))  ? 1 : 0) 
-// add WSIZE to access header of next block/epilogue
-
+/* Given block ptr bp, check to see if it is last block by seeing if the next header is the epilogue */
+#define LAST_BLOCK(bp) ((!(GET_SIZE(HDRP(NEXT_BLKP(bp))))) && (GET_ALLOC(HDRP(NEXT_BLKP(bp)))) ? 1 : 0) 
 
 void *heap_listp;
 
@@ -251,9 +249,9 @@ void *mm_realloc(void *bp, size_t size)
         return NULL;
     }
 
+    // declaring ints after first two cases, to save memory
     size_t asize, csize, nsize; 
     int nalloc;
-
 
     asize = ALIGN(size);
     csize = GET_SIZE(HDRP(bp));
@@ -263,10 +261,11 @@ void *mm_realloc(void *bp, size_t size)
     }
 
     // if bp is the last block
-    if(EPILOGUE() // add WSIZE to move from footer to next header, or epilogue
+    if(EPILOGUE(bp) // add WSIZE to move from footer to next header, or epilogue
     {
 
     }
+
     nsize = GET_SIZE(HDRP(NEXT_BLKP(bp)));
     nalloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
 
@@ -275,9 +274,16 @@ void *mm_realloc(void *bp, size_t size)
         // if the combined size of the next block and the current is large
         // enough to store asize
         if(nsize + csize >= asize){
+            PUT(HDRP(bp), PACK(nsize + csize, 1));
+            PUT(FTRP(bp), PACK(nsize + csize), 1));
+            return bp;
+        }
+        // if the combined if the combined size of the next block 
+        // and current block is not sufficient
+        // but the next block is the last in the heap
+        else if(nsize + csize < asize && EPILOGUE(NEXT_BLKP(bp))){
 
         }
-        else if(nsize + csize < asize && EPILOGUE())
 
 
     }
