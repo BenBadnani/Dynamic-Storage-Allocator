@@ -202,8 +202,11 @@ void *mm_malloc(size_t size)
     return bp;
 }
 
-
-
+/*
+    find_free - find the first fit for a given size among
+    the free blocks in the heap
+    pg 856 CSAPP
+*/ 
 static void *find_free(void* bp, size_t size)
 {
     void* current_pointer = bp; 
@@ -214,13 +217,11 @@ static void *find_free(void* bp, size_t size)
 	    }
     }
     return NULL;
-
 }
 
 /*
-    find_fit - find the first fit for a given size among
-    the free blocks in the heap
-    pg 856 CSAPP
+    find_fit - returns best fit from 
+    first fit and next fit
 */
 static void *find_fit(size_t size){
 
@@ -247,8 +248,6 @@ static void *better_fit(void *ptr1, void *ptr2){
 
     return  (GET_SIZE(HDRP(ptr1)) > GET_SIZE(HDRP(ptr2))) ? ptr2 : ptr1;
 }
-
-
 
 /*  place - find a block of free memory in heap
     allocate the passed in asize, and 
@@ -296,7 +295,6 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *bp, size_t size)
 {
-    
     // if bp points to null,
     // return mm_malloc(size)
     if(bp == NULL)
@@ -332,7 +330,11 @@ void *mm_realloc(void *bp, size_t size)
     return mm_brute_realloc(bp, size);
 }
 
-
+/*
+    should_recoalesce - checks to see 
+    if recaolesce function necessary 
+    for mm_realloc calls
+*/
 static bool should_recoalesce(void *bp, size_t size)
 {
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
@@ -358,9 +360,13 @@ static bool should_recoalesce(void *bp, size_t size)
     }
     // CASE 4 - neither are free, or neither alloc is free, return 0
    return ret; 
-
 }
 
+/*
+    mm_brute_realloc - brute force realloc,
+    finds new space in heap to allocate block of size passed in.
+    frees block previously pointed to by bp
+*/
 static void* mm_brute_realloc(void *bp, size_t size){
 
     // allocate new memory for realloc call
@@ -385,6 +391,12 @@ static void* mm_brute_realloc(void *bp, size_t size){
     return new_ptr; 
 }
 
+
+/*
+    recoalesce - coalesces contiguous blocks
+    that can be used to prospectively satisfy 
+    realloc requests
+*/
 static void *recoalesce(void* bp){
 
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
@@ -415,9 +427,6 @@ static void *recoalesce(void* bp){
     return bp; 
 
 }
-
-
-
 
 /*
     mm_current_and_next_free - takes in pointer bp, 
