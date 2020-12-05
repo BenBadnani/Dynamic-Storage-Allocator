@@ -39,6 +39,10 @@ static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
+static void *better_fit(void *ptr1, void *ptr2);
+static void *find_free(void* bp, size_t size);
+static void *recoalesce(void* bp);
+static void* mm_brute_realloc(void *bp, size_t size, size_t size_bp);
 //static int mm_check(void);
 
 /* single word (4) or double word (8) alignment */
@@ -159,8 +163,7 @@ static void *coalesce(void *bp)
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0)); 
         bp = PREV_BLKP(bp);
     }
-return bp; 
-
+    return bp; 
 }
 
 /* 
@@ -197,23 +200,53 @@ void *mm_malloc(size_t size)
     return bp;
 }
 
-/*
-    find_fit - find the first fit for a given size among
-    the free blocks in the heap
-    pg 856 CSAPP
-*/
-static void *find_fit(size_t asize)
-{
-void *bp;
 
-    for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
-	    if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))) {
-		    return bp;
+
+static void *find_free(void* bp, size_t size)
+{
+    void* current_pointer = bp; 
+
+    for(; GET_SIZE(HDRP(current_pointer)) > 0; current_pointer = NEXT_BLKP(current_pointer)){
+	    if(!GET_ALLOC(HDRP(current_pointer)) && (size <= GET_SIZE(HDRP(current_pointer)))) {
+		    return current_pointer;
 	    }
     }
     return NULL;
 
 }
+
+/*
+    find_fit - find the first fit for a given size among
+    the free blocks in the heap
+    pg 856 CSAPP
+*/
+static void *find_fit(size_t size){
+
+    if(size == 0){
+        return NULL; 
+    }
+
+    void *first_fit = find_free(heap_listp, size);
+
+    if(first_fit == NULL){
+        return NULL;
+    }
+
+    void *next_fit = find_free(first_fit, size);
+
+    if(next_fit == NULL){
+        return first_fit;
+    }
+
+    return better_fit(first_fit, next_fit);
+}
+
+static void *better_fit(void *ptr1, void *ptr2){
+
+    return  (GET_SIZE(HDRP(ptr1)) > GET_SIZE(HDRP(ptr2))) ? ptr2 : ptr1;
+}
+
+
 
 /*  place - find a block of free memory in heap
     allocate the passed in asize, and 
@@ -258,10 +291,11 @@ void mm_free(void *bp)
 /*
  * mm_realloc - given a pointer previously called by malloc or realloc,
  * adjust size of respective block of memory to match requirements of passed in size
+   or find new block in heap to allocate the size.
  */
 void *mm_realloc(void *bp, size_t size)
 {
-       // if bp points to null,
+    // if bp points to null,
     // return mm_malloc(size)
     if(bp == NULL)
         return mm_malloc(size);
@@ -272,21 +306,53 @@ void *mm_realloc(void *bp, size_t size)
         return NULL;
     }
 
-    // allocate new memory for realloc call
-    void* new_ptr = mm_malloc(size);
-    // check if malloc works
-    if(new_ptr == NULL){
-        return NULL;
+    size_t aligned_size, current_size; 
+
+    aligned_size = ALIGN(size);
+    current_size = GET_SIZE(HDRP(bp));
+
+    if(aligned_size == current_size){
+        return bp; 
     }
 
-    size_t size_bp = GET_SIZE(HDRP(bp));
+    void* bp_prev = bp; 
+
+    bp = recoalesce(bp);
+
+    size_t new_size = GET_SIZE(HDRP(bp));
+
+    if(aligned_size <= new_size){
+        memcpy(bp, bp_prev, aligned_size);
+        return bp; 
+    }
+
+    return mm_brute_realloc(bp_prev, size, current_size);
+
+    
+}
+
+static void* mm_brute_realloc(void *bp, size_t size, size_t size_bp){
+
+    // allocate new memory for realloc call
+    void* new_ptr;
+    // check if malloc works
+    if((new_ptr = mm_malloc(size)) == NULL){
+        return NULL;
+    }
 
     // if the bp's size is less than newly allocated size in new_ptr
     // copy over only size_bp elems from bp to new_ptr
     // else, copy over the smaller, newly defined, size passed in
-    size = (size_bp <= size ? size_bp : size);
+    //size = (size_bp <= size ? size_bp : size);
+
+    if(size_bp <= size){
+        memcpy(new_ptr, bp, size_bp);
+    }
+    else if(size_bp > size){
+        memcpy(new_ptr, bp, size);
+    }
     
-    memcpy(new_ptr, bp, size);
+    //memcpy(new_ptr, bp, size);
 
     // free the old block of memory that has now been reallocated
     mm_free(bp);
@@ -294,16 +360,61 @@ void *mm_realloc(void *bp, size_t size)
     return new_ptr; 
 }
 
+static void *recoalesce(void* bp){
+
+    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
+    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); 
+    size_t size = GET_SIZE(HDRP(bp));
+
+    if (prev_alloc && next_alloc) { 
+        return bp;
+    }
+    else if (prev_alloc && !next_alloc) {
+        size += GET_SIZE(HDRP(NEXT_BLKP(bp))); 
+        PUT(HDRP(bp), PACK(size, 1)); 
+        PUT(FTRP(bp), PACK(size,1));
+    }
+
+    else if (!prev_alloc && next_alloc) {
+        size += GET_SIZE(HDRP(PREV_BLKP(bp))); 
+        PUT(FTRP(bp), PACK(size, 1)); 
+        PUT(HDRP(PREV_BLKP(bp)), PACK(size, 1)); 
+        bp = PREV_BLKP(bp);
+    }
+    else {
+        size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(FTRP(NEXT_BLKP(bp)));
+        PUT(HDRP(PREV_BLKP(bp)), PACK(size, 1)); 
+        PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 1)); 
+        bp = PREV_BLKP(bp);
+    }
+    return bp; 
+
+}
+
+
+
+
+/*
+    mm_current_and_next_free - takes in pointer bp, 
+    returns true if bp and block after bp are free,
+    false otherwise
+
+static bool mm_current_and_next_free(bp){
+
+    return (!(GET_ALLOC(HDRP(bp))) && !(GET_ALLOC(HDRP(NEXT_BLKP(bp))))); 
+     
+}
+
 /* mm_check - checks to make sure allocated and free blocks
    are within heap boundaries, that there are no contiguous free blocks
    that have not been coalesced, and that no allocated blocks overlap.
-*/ /*
+
 static int mm_check(void){
 
     void* start = mem_heap_lo(); 
     void* end = mem_heap_hi();
     void* bp; 
-    int ret = 0;
+    int ret = 1;
 
     // check to see if address is valid heap address
 
@@ -312,23 +423,28 @@ static int mm_check(void){
         // check to see if any pointers exceed heap high and low space
         if(bp < start || bp > end){
             printf("Error: %p does not point to a valid heap block\n", bp);
-            ret += 1; 
+            // if bp is outside heap, contiguous blocks are likely outside as well, terminate mm_check
+            break; 
         }
         // check for any contiguous free blocks
         if((void *)NEXT_BLKP(bp) < end){ // to avoid seg faults
-            if(!(GET_ALLOC(HDRP(bp))) && !(GET_ALLOC(HDRP(NEXT_BLKP(bp))))){
+            if(mm_current_and_next_free(bp)){
                 printf("Error: %p and %p have not been coalesced\n", bp, NEXT_BLKP(bp));
-                ret += 1; 
-                }
-            // if header dneq footer, there is block overlap
+                break; 
+            }
             if((!!(GET_SIZE(HDRP(bp)) ^ GET_SIZE(FTRP(bp)))) 
                 & GET_ALLOC(HDRP(bp)) 
                 &  GET_ALLOC(HDRP(NEXT_BLKP(bp)))){ // and if both blocks are allocated
                 printf("Error: The allocated blocks, %p and %p, overlap\n", bp, NEXT_BLKP(bp));
+                break;
             }
         }
         
     }
-
+    // condition only met if bp points to epilogue block
+    if(GET_SIZE(bp) == 0 && GET_ALLOC(bp)){
+        ret = 0; 
+    }
     return ret;
-}*/
+}
+*/
