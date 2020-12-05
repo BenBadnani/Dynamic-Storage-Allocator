@@ -17,6 +17,7 @@
 
 #include "mm.h"
 #include "memlib.h"
+#include <stdbool.h> 
 
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
@@ -43,7 +44,7 @@ static void *better_fit(void *ptr1, void *ptr2);
 static void *find_free(void* bp, size_t size);
 static void *recoalesce(void* bp);
 static void* mm_brute_realloc(void *bp, size_t size);
-static int should_recoalesce(void *bp, size_t size);
+static bool should_recoalesce(void *bp, size_t size);
 //static int mm_check(void);
 
 /* single word (4) or double word (8) alignment */
@@ -295,6 +296,7 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *bp, size_t size)
 {
+    
     // if bp points to null,
     // return mm_malloc(size)
     if(bp == NULL)
@@ -311,24 +313,27 @@ void *mm_realloc(void *bp, size_t size)
     aligned_size = ALIGN(size);
     current_size = GET_SIZE(HDRP(bp));
 
-
     if(aligned_size == current_size){
-        return bp; 
+        void *next_fit = find_fit(aligned_size);
+        if(next_fit != NULL){
+            memcpy(next_fit, bp, aligned_size);
+            free(bp);
+            return next_fit; 
+        }
     }
 
-    if(should_recoalesce(bp, aligned_size)){
-        void* bp_prev = bp;
+     if(should_recoalesce(bp, aligned_size)){
+        void *bp_prev = bp;
         bp = recoalesce(bp);
         memcpy(bp, bp_prev, aligned_size);
         return bp;
     }
     
-    return mm_brute_realloc(bp, aligned_size);
-    
+    return mm_brute_realloc(bp, size);
 }
 
 
-static int should_recoalesce(void *bp, size_t size)
+static bool should_recoalesce(void *bp, size_t size)
 {
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); 
@@ -336,27 +341,23 @@ static int should_recoalesce(void *bp, size_t size)
     size_t prev_size = GET_SIZE(FTRP(PREV_BLKP(bp))); 
     size_t size_bp = GET_SIZE(HDRP(bp));
 
-    if(NEXT_BLKP(bp) == mem_heap_hi() || PREV_BLKP(bp) == mem_heap_lo()){
-        return 0;
-    }
+    bool ret = false; 
 
     // CASE 1 - next blkp is free and its size >= bp's size - size
     if(next_alloc == 0 && (next_size + size_bp >= size)){
-        return 1;
+        ret = true;
     }
     // CASE 2 - prev blkp is free and its size >= bp's size - size
     else if(prev_alloc == 0 && (prev_size + size_bp >= size)){
-        return 1;
+        ret = true;
     }
     // CASE 3 - prev and next block are free, and their combined size >= bp's size - size
     else if(next_alloc == 0 && prev_alloc == 0 && 
         ((next_size + prev_size + size_bp) >= size)){
-        return 1;
+        ret = true;
     }
-    // CASE 4 - neither are free, return 0
-    else{
-        return 0;
-    }
+    // CASE 4 - neither are free, or neither alloc is free, return 0
+   return ret; 
 
 }
 
