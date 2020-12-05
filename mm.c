@@ -42,7 +42,8 @@ static void place(void *bp, size_t asize);
 static void *better_fit(void *ptr1, void *ptr2);
 static void *find_free(void* bp, size_t size);
 static void *recoalesce(void* bp);
-static void* mm_brute_realloc(void *bp, size_t size, size_t size_bp);
+static void* mm_brute_realloc(void *bp, size_t size);
+static int should_recoalesce(void *bp, size_t size);
 //static int mm_check(void);
 
 /* single word (4) or double word (8) alignment */
@@ -287,7 +288,6 @@ void mm_free(void *bp)
     //mm_check();
 }
 
-
 /*
  * mm_realloc - given a pointer previously called by malloc or realloc,
  * adjust size of respective block of memory to match requirements of passed in size
@@ -311,48 +311,72 @@ void *mm_realloc(void *bp, size_t size)
     aligned_size = ALIGN(size);
     current_size = GET_SIZE(HDRP(bp));
 
+
     if(aligned_size == current_size){
         return bp; 
     }
 
-    void* bp_prev = bp; 
-
-    bp = recoalesce(bp);
-
-    size_t new_size = GET_SIZE(HDRP(bp));
-
-    if(aligned_size <= new_size){
+    if(should_recoalesce(bp, aligned_size)){
+        void* bp_prev = bp;
+        bp = recoalesce(bp);
         memcpy(bp, bp_prev, aligned_size);
-        return bp; 
+        return bp;
     }
-
-    return mm_brute_realloc(bp_prev, size, current_size);
-
+    
+    return mm_brute_realloc(bp, aligned_size);
     
 }
 
-static void* mm_brute_realloc(void *bp, size_t size, size_t size_bp){
+
+static int should_recoalesce(void *bp, size_t size)
+{
+    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
+    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); 
+    size_t next_size = GET_SIZE(HDRP(NEXT_BLKP(bp))); 
+    size_t prev_size = GET_SIZE(FTRP(PREV_BLKP(bp))); 
+    size_t size_bp = GET_SIZE(HDRP(bp));
+
+    if(NEXT_BLKP(bp) == mem_heap_hi() || PREV_BLKP(bp) == mem_heap_lo()){
+        return 0;
+    }
+
+    // CASE 1 - next blkp is free and its size >= bp's size - size
+    if(next_alloc == 0 && (next_size + size_bp >= size)){
+        return 1;
+    }
+    // CASE 2 - prev blkp is free and its size >= bp's size - size
+    else if(prev_alloc == 0 && (prev_size + size_bp >= size)){
+        return 1;
+    }
+    // CASE 3 - prev and next block are free, and their combined size >= bp's size - size
+    else if(next_alloc == 0 && prev_alloc == 0 && 
+        ((next_size + prev_size + size_bp) >= size)){
+        return 1;
+    }
+    // CASE 4 - neither are free, return 0
+    else{
+        return 0;
+    }
+
+}
+
+static void* mm_brute_realloc(void *bp, size_t size){
 
     // allocate new memory for realloc call
-    void* new_ptr;
+    void* new_ptr = mm_malloc(size);
     // check if malloc works
-    if((new_ptr = mm_malloc(size)) == NULL){
+    if(new_ptr == NULL){
         return NULL;
     }
+
+    size_t size_bp = GET_SIZE(HDRP(bp));
 
     // if the bp's size is less than newly allocated size in new_ptr
     // copy over only size_bp elems from bp to new_ptr
     // else, copy over the smaller, newly defined, size passed in
-    //size = (size_bp <= size ? size_bp : size);
-
-    if(size_bp <= size){
-        memcpy(new_ptr, bp, size_bp);
-    }
-    else if(size_bp > size){
-        memcpy(new_ptr, bp, size);
-    }
+    size = (size_bp <= size ? size_bp : size);
     
-    //memcpy(new_ptr, bp, size);
+    memcpy(new_ptr, bp, size);
 
     // free the old block of memory that has now been reallocated
     mm_free(bp);
