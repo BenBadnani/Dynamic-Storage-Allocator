@@ -40,8 +40,6 @@ static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
-static void *better_fit(void *ptr1, void *ptr2);
-static void *find_free(void* bp, size_t size);
 static void *recoalesce(void* bp);
 static void* mm_brute_realloc(void *bp, size_t size);
 static bool should_recoalesce(void *bp, size_t size);
@@ -86,6 +84,8 @@ static bool should_recoalesce(void *bp, size_t size);
 // global heap_list pointer 
 void *heap_listp;
 
+void *last_free_block_found; 
+
 /* 
  * mm_init - initialize the malloc package.
  * Code from pg 831 CSAPP
@@ -99,6 +99,7 @@ int mm_init(void)
     PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1)); /* Prologue footer */
     PUT(heap_listp + (3*WSIZE), PACK(0, 1)); /* Epilogue header */
     heap_listp += (2*WSIZE);
+    last_free_block_found = heap_listp; 
 
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     
@@ -165,6 +166,9 @@ static void *coalesce(void *bp)
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0)); 
         bp = PREV_BLKP(bp);
     }
+
+    if ((last_free_block_found > bp) && ((char *)last_free_block_found < NEXT_BLKP(bp))) 
+	    last_free_block_found = bp;
     return bp; 
 }
 
@@ -207,46 +211,25 @@ void *mm_malloc(size_t size)
     the free blocks in the heap
     pg 856 CSAPP
 */ 
-static void *find_free(void* bp, size_t size)
+static void *find_fit(size_t size)
 {
-    void* current_pointer = bp; 
+    void* point_in_the_list = last_free_block_found; 
 
-    for(; GET_SIZE(HDRP(current_pointer)) > 0; current_pointer = NEXT_BLKP(current_pointer)){
-	    if(!GET_ALLOC(HDRP(current_pointer)) && (size <= GET_SIZE(HDRP(current_pointer)))) {
-		    return current_pointer;
+    // from the last free block to the end of the list
+    for(; GET_SIZE(HDRP(last_free_block_found)) > 0; last_free_block_found = NEXT_BLKP(last_free_block_found)){
+	    if(!GET_ALLOC(HDRP(last_free_block_found)) && (size <= GET_SIZE(HDRP(last_free_block_found)))) {
+		    return last_free_block_found;
+	    }
+    }
+
+    // if not found in second half of the heap, start from the beginning
+
+    for(last_free_block_found = heap_listp; last_free_block_found < point_in_the_list; last_free_block_found = NEXT_BLKP(last_free_block_found)){
+	    if(!GET_ALLOC(HDRP(last_free_block_found)) && (size <= GET_SIZE(HDRP(last_free_block_found)))) {
+		    return last_free_block_found;
 	    }
     }
     return NULL;
-}
-
-/*
-    find_fit - returns best fit from 
-    first fit and next fit
-*/
-static void *find_fit(size_t size){
-
-    if(size == 0){
-        return NULL; 
-    }
-
-    void *first_fit = find_free(heap_listp, size);
-
-    if(first_fit == NULL){
-        return NULL;
-    }
-
-    void *next_fit = find_free(first_fit, size);
-
-    if(next_fit == NULL){
-        return first_fit;
-    }
-
-    return better_fit(first_fit, next_fit);
-}
-
-static void *better_fit(void *ptr1, void *ptr2){
-
-    return  (GET_SIZE(HDRP(ptr1)) > GET_SIZE(HDRP(ptr2))) ? ptr2 : ptr1;
 }
 
 /*  place - find a block of free memory in heap
@@ -424,6 +407,10 @@ static void *recoalesce(void* bp){
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 1)); 
         bp = PREV_BLKP(bp);
     }
+
+    if ((last_free_block_found > bp) && ((char *)last_free_block_found < NEXT_BLKP(bp))) 
+	    last_free_block_found = bp;
+
     return bp; 
 
 }
@@ -438,7 +425,7 @@ static bool mm_current_and_next_free(bp){
     return (!(GET_ALLOC(HDRP(bp))) && !(GET_ALLOC(HDRP(NEXT_BLKP(bp))))); 
      
 }
-
+*/
 /* mm_check - checks to make sure allocated and free blocks
    are within heap boundaries, that there are no contiguous free blocks
    that have not been coalesced, and that no allocated blocks overlap.
