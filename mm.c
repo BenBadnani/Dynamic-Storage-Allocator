@@ -289,34 +289,24 @@ void *mm_realloc(void *bp, size_t size)
         return NULL;
     }
 
-    size_t aligned_size, current_size; 
+    size_t asize, current_size; 
 
-    aligned_size = ALIGN(size);
     current_size = GET_SIZE(HDRP(bp));
 
-/*
-    if(aligned_size == current_size){
-        place(bp, size);
+     if (size <= DSIZE)
+        asize = 2*DSIZE;
+    else
+        asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
+
+
+    if(asize <= current_size){
         return bp; 
-    }*/
-
-    if(aligned_size == current_size){
-        // allocate new memory for realloc call
-        void* new_ptr = mm_malloc(size);
-        // check if malloc works
-        if(new_ptr == NULL)
-            return NULL;
-        memcpy(new_ptr,bp,size);
-        memcpy(bp, new_ptr, size);
-        free(new_ptr);
-        return bp;
-
     }
 
-     if(should_recoalesce(bp, aligned_size)){
+     if(should_recoalesce(bp, asize)){
         void *bp_prev = bp;
         bp = recoalesce(bp);
-        memcpy(bp, bp_prev, aligned_size);
+        memcpy(bp, bp_prev, asize);
         return bp;
     }
     
@@ -368,13 +358,6 @@ static void* mm_brute_realloc(void *bp, size_t size){
     if(new_ptr == NULL){
         return NULL;
     }
-
-    //size_t size_bp = GET_SIZE(HDRP(bp));
-
-    // if the bp's size is less than newly allocated size in new_ptr
-    // copy over only size_bp elems from bp to new_ptr
-    // else, copy over the smaller, newly defined, size passed in
-    //size = (size_bp <= size ? size_bp : size);
     
     memcpy(new_ptr, bp, size);
 
@@ -383,7 +366,6 @@ static void* mm_brute_realloc(void *bp, size_t size){
 
     return new_ptr; 
 }
-
 
 /*
     recoalesce - coalesces contiguous blocks
